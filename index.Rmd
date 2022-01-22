@@ -1,0 +1,16 @@
+---
+title: "Tiffany Hsu"
+image: "tiff_pic.jpg"
+links:
+  - label: linkedin
+    url: "https://www.linkedin.com/in/tifhsu/"
+  - label: github
+    url: "https://github.com/tifhsu88"
+  - label: email
+    url: "mailto:thsu@ucsb.edu"
+output:
+  postcards::jolla
+site: distill::distill_website
+---
+ 
+I am a third year undergraduate student at UC Santa Barbara majoring in Environmental Studies and minoring in spatial science. 
