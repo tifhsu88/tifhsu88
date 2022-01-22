@@ -1,11 +1,18 @@
 {
   "articles": [
     {
+      "path": "blog.html",
+      "title": "blog",
+      "author": [],
+      "contents": "\n\n\n\n",
+      "last_modified": "2022-01-22T13:41:11-08:00"
+    },
+    {
       "path": "index.html",
       "title": "Tiffany Hsu",
       "author": [],
       "contents": "\n\n          \n          \n          Tiffany Hsu\n          \n          \n          Home\n          About\n          Blog\n          ☰\n          \n          \n      \n        \n          \n            Tiffany Hsu\n          \n          \n            \n              I am a third year undergraduate student at UC Santa Barbara majoring in Environmental Studies and minoring in spatial science.\n            \n            \n              I am a third year undergraduate student at UC Santa Barbara majoring in Environmental Studies and minoring in spatial science.\n            \n          \n\n          \n            \n              \n                  \n                    \n                      linkedin\n                    \n                  \n                \n                                \n                  \n                    \n                      github\n                    \n                  \n                \n                                \n                  \n                    \n                      email\n                    \n                  \n                \n                              \n          \n\n          \n            \n              \n                                \n                  \n                    linkedin\n                  \n                \n                                \n                  \n                    github\n                  \n                \n                                \n                  \n                    email\n                  \n                \n                              \n            \n          \n        \n      \n    \n\n    \n    \n    ",
-      "last_modified": "2022-01-22T13:19:57-08:00"
+      "last_modified": "2022-01-22T13:41:19-08:00"
     }
   ],
   "collections": ["posts/posts.json"]
