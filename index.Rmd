@@ -13,4 +13,6 @@ output:
 site: distill::distill_website
 ---
  
-I am a third year undergraduate student at UC Santa Barbara majoring in Environmental Studies and minoring in spatial science. 
+I am a third year undergraduate student at UC Santa Barbara majoring in Environmental Studies and minoring in spatial science. In addition to my roles as a research assistant in the [MSI Analytical Lab](https://msi.ucsb.edu/facilities-services/analytical-lab/about) and in Robert Heilmayr’s [Conservation Economics Lab](https://www.conservation-econ.com), I also serve as an undergraduate fellow for the Central Coast Data Science Project where I contribute to the development of the growing data science science program at UCSB. Outside of academics, I enjoy dancing, yoga, baking, taking spin courses, and visiting anywhere with massive trees. 
+
+
