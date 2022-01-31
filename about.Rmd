@@ -1,20 +1,20 @@
 ---
-title: "About this site"
+title: "| about me"
 description: |
-  Some additional details about the website
+    learn about my interests and experience!
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-## Interests
+## interests:
 I first stumbled upon the field of data science when I tagged along with my brother to his data science club meeting when I visited UCSB to see if I could imagine myself studying there.
 Fast forward one and a half years later, I took Intro to Data Science to see what the commotion was all about in this supposedly rising field. Little did I know how data science would become an avenue in which I could combine my interests of creative problem solving and helping the environment. 
 
 Perhaps my love for creativity stems from my passion for dancing, but I was excited to find a new method to express creativity through a more analytical lens. The act of gathering information to draw conclusions aligns with my enjoyment of helping others. I am in the progress of finding out where my passions lie within the realm of environmental studies. Currently, my interests include utilizing spatial data to address large scale processes such as land use change.
 
-## Experience
+## experience:
 
 - At Robert Heilmayr's Conservation Economics Lab (CEL), I combine my passion for data analysis with the desire to inform environmental change through working on projects that explore the impact of reforestation policies and palm oil supply chain certification in Indonesia. I also assist in using satellite data to generate maps that assess land cover change in South America. 
 - As a Central Coast Data Science Program Fellow, I participate in the year-long data science capstone program. I am currently working with Kelly Caylor’s [WAVES lab](http://caylor.eri.ucsb.edu) to map agricultural investment and water-use in sub-Saharan Africa by combining computer vision and satellite imagery. 
