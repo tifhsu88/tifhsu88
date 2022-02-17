@@ -1,0 +1,65 @@
+---
+title: "| resume"
+---
+
+<a href = 'resume.pdf' target = '_blank'>click here for a PDF of my resume!</a>
+
+## Education
+**University of California, Santa Barbara**, *Expected graduation: December 2022*
+
+Environmental Studies, B.S.
+
+Spatial Studies Minor
+
+
+# Experience
+## Conservation Economics Lab
+***Undergraduate Research Assistant***, June 2021- Present
+
+- Digitize spatial and remote sensing data related to land use/land cover and agriculture, focusing specifically on monitoring palm oil supply chain change in Indonesia.
+- Georeference and digitize land cover maps using ArcGIS Pro to map palm oil plantations in Indonesia.
+- Retrieve Sentinel and Landsat satellite images from Google Earth Engine through command line for use
+in monitoring land use change in Chile.
+
+## Introduction to Data Science Course
+***Undergraduate Learning Assistant***, March 2021- Present
+
+- Provided assistance to students by answering questions in class and holding office hours, which furthered their understanding of the foundations of data science.
+- Work with teaching staff to develop questions and exercises that introduce Python and data science
+concepts to non-programmers in a digestible manner.
+- Designed cheatsheet style guide for learning the basic functions of Python from the datascience and
+NumPy modules to make their learning experience easier.
+
+## Analytical Lab
+***Lab Assistant***, September 2021- Present
+
+- Dry, weigh, and load biological, synthetic, and geological samples into tin capsules or nickel sleeves.
+- Acidify filters with HCl to remove inorganic carbonates.
+
+## Cheadle Center for Biodiversity and Ecological Restoration
+***Intern***, July 2020 - August 2020
+
+- Digitized and georeferenced specimens for use in the National Science Foundation.
+
+## Storke Ranch Vernal Pool Restoration
+***Intern***, September 2019 - December 2019
+
+- Aided in sensitive vernal pool ecosystem restoration by removing invasive plant species using weeding
+and solarization techniques and planting native species.
+- Supervised campus volunteer groups in invasive plant identification, weeding, and planting techniques.
+
+# Academic Projects
+## Data Science Capstone
+***2021-2022 Cohort***, September 2021 - Present
+
+- Working in partnership with the Earth Research Institute at UCSB to set up the necessary infrastructure, generate appropriate label data, and disseminate that data for training computer vision models that can be used to monitor and map agricultural expansion and irrigated water use across southern Africa.
+
+## Environmental Leadership Incubator
+***2020-2021 Cohort***, October 2020 - June 2021
+
+- Partnered with Santa Barbara Food Bank to map out potential future food distribution locations using
+poverty data.
+- Organized budget plans, grant proposals, and project plans.
+- Constructed interactive map using Tableau with data from the Census Bureau.
+
+

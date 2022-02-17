@@ -21,4 +21,4 @@ Perhaps my love for creativity stems from my passion for dancing, but I was exci
 
 - As an undergraduate learning assistant (ULA) for CMPSC 5A (Introduction to Data Science), I provide assistance to students with no prior coding experience by answering questions in class and holding office hours, furthering their understanding of the foundations of data science. As an environmental studies major, I offer students outside of statistics or computer science departments an outsider approach of delving into data science. 
 
-- I am also fortunate enough to work in MSI's Analytical Lab where I assist in sample prepping for CHN analysis.
+- I also work in MSI's Analytical Lab where I assist in sample prepping for CHN analysis.

@@ -1,0 +1,1006 @@
+---
+title: "USGS water timeseries!"
+description: |
+  Materials from ENVS 193SW
+author:
+  - name: Tiffany Hsu
+date: 2022-02-16
+output:
+  distill::distill_article:
+    self_contained: false
+    code_folding: hide 
+---
+The data for this lab are available from the [United States Geological Survey](https://water.usgs.gov/watuse/data/) for years 1950-2015.
+
+## Data Wrangling
+
+#### Load libraries
+```{r, message =FALSE, warning = FALSE, echo = TRUE, error= TRUE} 
+library(tidyverse)
+library(here)
+library(janitor)
+library(readxl)
+library(sf)
+library(USAboundaries)
+library(scales) 
+library(ggthemes) 
+library(gghighlight) 
+library(ggnewscale)
+library(USAboundaries)
+library(sf)
+```
+
+#### Load data
+```{r, warning = FALSE, message = FALSE, error = TRUE, echo = TRUE}
+# Read data for 1950
+d_wu_1950 <- lapply(excel_sheets(here("data/us1950.xlsx")), 
+            function(x) read_excel(here("data/us1950.xlsx"), skip = 3, sheet = x)) %>%
+            reduce(left_join, by = "Area") %>% 
+            clean_names() %>% 
+            mutate_at(1:9, as.numeric) %>% 
+            select(-note_industrial_and_thermoelectric_were_combined_in_1950) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1955
+d_wu_1955 <- lapply(excel_sheets(here("data/us1955.xlsx")), 
+            function(x) read_excel(here("data/us1955.xlsx"), skip = 3, sheet = x)) %>% 
+            reduce(left_join, by = "Area") %>% 
+            clean_names() %>% 
+            mutate_at(1:11, as.numeric) %>% 
+            select(-note_industrial_and_thermoelectric_were_combined_in_1955) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1960
+d_wu_1960 <- lapply(excel_sheets(here("data/us1960.xlsx")), 
+             function(x) read_excel(here("data/us1960.xlsx"), skip = 3, sheet = x)) %>% 
+            reduce(left_join, by = "Area") %>% 
+            clean_names() %>% 
+            mutate_at(1:35, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1965
+d_wu_1965 <- lapply(excel_sheets(here("data/us1965.xlsx")), 
+             function(x) read_excel(here("data/us1965.xlsx"), skip = 3, sheet = x)) %>% 
+            reduce(left_join, by = "Area") %>% 
+            clean_names() %>% 
+            mutate_at(1:33, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1970
+d_wu_1970 <- lapply(excel_sheets(here("data/us1970.xlsx")), 
+             function(x) read_excel(here("data/us1970.xlsx"), skip = 3, sheet = x)) %>% 
+            reduce(left_join, by = "Area") %>% 
+            clean_names() %>% 
+            mutate_at(1:34, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1975
+d_wu_1975 <- lapply(excel_sheets(here("data/us1975.xlsx")), 
+             function(x) read_excel(here("data/us1975.xlsx"), skip = 3, sheet = x)) %>% 
+            reduce(left_join, by = "Area") %>% 
+            clean_names() %>% 
+            mutate_at(1:34, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1980
+d_wu_1980 <- lapply(excel_sheets(here("data/us1980.xlsx")), 
+              function(x) read_excel(here("data/us1980.xlsx"), skip = 3, sheet = x)) %>% 
+            reduce(left_join, by = "Area") %>% 
+            clean_names() %>% 
+            mutate_at(1:34, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1985 (tab delimited text file)
+d_wu_1985 <- read_tsv(here("data/us1985.txt")) %>% 
+            clean_names() %>% 
+            mutate_at(2, as.numeric) %>%
+            mutate_at(4:163, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 1990 (filter out STATE)
+d_wu_1990 <- read_xls(here("data/us1990.xls")) %>% 
+            clean_names() %>% 
+            filter(state != class(character)) %>% 
+            mutate_at(2, as.numeric) %>%
+            mutate_at(4:163, as.numeric) %>%
+            replace(is.na(.), 0)
+
+# Read data for 1995
+d_wu_1995 <- read_xls(here("data/us1995.xls")) %>% 
+            clean_names() %>% 
+            mutate_at(1, as.numeric) %>% 
+            mutate_at(3:4, as.numeric) %>% 
+            mutate_at(6:252, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 2000
+d_wu_2000 <- read_xls(here("data/us2000.xls")) %>% 
+            clean_names() %>% 
+            mutate_at(2:70, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 2005
+d_wu_2005 <- read_xls(here("data/us2005.xls")) %>% 
+            clean_names() %>% 
+            mutate_at(2:4, as.numeric) %>% 
+            mutate_at(6:108, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 2010
+d_wu_2010 <- read_xlsx(here("data/us2010.xlsx")) %>% 
+            clean_names() %>% 
+            mutate_at(2, as.numeric) %>% 
+            mutate_at(4:117, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+# Read data for 2015
+d_wu_2015 <- read_xlsx(here("data/us2015.xlsx"), skip=1) %>% 
+            clean_names() %>% 
+            mutate_at(2, as.numeric) %>% 
+            mutate_at(4:141, as.numeric) %>% 
+            replace(is.na(.), 0)
+
+```
+
+#### Organize data by sector and FIPS 
+
+(Federal Information Processing Standards)
+
+```{r, warning = FALSE, message = FALSE, error = TRUE, echo = TRUE}
+# Creating new object from data object 1950
+wu_1950 <- d_wu_1950 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, inpt_wgw_fr, inpt_wsw_fr) %>% 
+  mutate("State" = area, 
+         "Year" = 1950, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr, 
+         "Rural" = NA, 
+         "Industrial" = inpt_wgw_fr + inpt_wsw_fr, 
+         "Thermoelectric" = NA) %>% 
+select(State, Year, "Public Supply",  Irrigation, 
+       Industrial, Rural, Thermoelectric) %>% 
+  group_by(State) %>% 
+  pivot_longer(3:7, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1955
+wu_1955 <- d_wu_1955 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, inpt_wgw_fr, inpt_wsw_fr) %>% 
+  mutate("State" = area, 
+         "Year" = 1955,
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr, 
+         "Rural" = NA, 
+         "Industrial" = inpt_wgw_fr + inpt_wsw_fr, 
+         "Thermoelectric" = NA) %>% 
+select(State, Year, "Public Supply",  Irrigation, 
+       Industrial, Rural, Thermoelectric) %>% 
+  group_by(State) %>% 
+  pivot_longer(3:7, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1960
+# 1. The irrigation sector tags ir_wgw_fr + ir_wsw_fr are empty and not suitable for use. 
+# 2. We will use ir_w_fr_to, which is total self-supplied freshwater withdrawal. 
+# For the future, we must be aware of using empty cells to display data,
+# especially when comparing to other years/sectors. 
+# The lack of data could imply low values, when in reality, 
+# the correct data just was not utilized.
+wu_1960 <- d_wu_1960 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_w_fr_to, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = area,
+         "Year" = 1960,
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_w_fr_to,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = oi_wgw_fr + oi_wsw_fr,
+         "Thermoelectric" = pt_wgw_fr + pt_wsw_fr) %>% 
+  select(State, Year, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric, )%>% 
+  group_by(State) %>% 
+  pivot_longer(3:7, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1965
+wu_1965 <- d_wu_1965 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = area,
+         "Year" = 1965,
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = oi_wgw_fr + oi_wsw_fr,
+         "Thermoelectric" = pt_wgw_fr + pt_wsw_fr) %>% 
+  select(State, Year, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric, )%>% 
+  group_by(State) %>% 
+  pivot_longer(3:7, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1970
+wu_1970 <- d_wu_1970 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = area, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = oi_wgw_fr + oi_wsw_fr,
+         "Thermoelectric" = pt_wgw_fr + pt_wsw_fr,
+         "Year" = 1970) %>% 
+  select(State, Year, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric, )%>% 
+  group_by(State) %>% 
+  pivot_longer(3:7, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1975
+wu_1975 <- d_wu_1975 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = area, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = oi_wgw_fr + oi_wsw_fr,
+         "Thermoelectric" = pt_wgw_fr + pt_wsw_fr,
+         "Year" = 1975) %>% 
+  select(State, Year, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric, )%>% 
+  group_by(State) %>% 
+  pivot_longer(3:7, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1980
+wu_1980 <- d_wu_1980 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = area, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = oi_wgw_fr + oi_wsw_fr,
+         "Thermoelectric" = pt_wgw_fr + pt_wsw_fr,
+         "Year" = 1980) %>% 
+  select(State, Year, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric, )%>% 
+  group_by(State) %>% 
+  pivot_longer(3:7, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1985
+wu_1985 <- d_wu_1985 %>% 
+  select(scode, ps_wgwfr, ps_wswfr, ir_wgwfr, ir_wswfr,
+         do_ssgwf, do_ssswf, ls_gwtot, ls_swtot, mi_wgwfr,
+         mi_wswfr, in_wgwfr, in_wswfr, pt_wgwfr, pt_wswfr) %>% 
+  mutate("State" = scode, 
+         "Public Supply" = ps_wgwfr + ps_wswfr, 
+         "Irrigation" = ir_wgwfr + ir_wswfr,
+         "Rural" = do_ssgwf + do_ssswf + ls_gwtot + ls_swtot,
+         "Industrial" = mi_wgwfr + mi_wswfr + in_wgwfr + in_wswfr,
+         "Thermoelectric" = pt_wgwfr + pt_wswfr) %>% 
+  select(State, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric) %>% 
+  group_by(State) %>% 
+  summarise(across(1:5,sum), Year = 1985) %>% 
+  pivot_longer(2:6, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 1990
+wu_1990 <- d_wu_1990 %>% 
+  select(scode, ps_wgwfr, ps_wswfr, ir_wgwfr, ir_wswfr,
+         do_ssgwf, do_ssswf, ls_gwtot, ls_swtot, mi_wgwfr,
+         mi_wswfr, in_wgwfr, in_wswfr, pt_wgwfr, pt_wswfr) %>% 
+  mutate("State" = scode, 
+         "Public Supply" = ps_wgwfr + ps_wswfr, 
+         "Irrigation" = ir_wgwfr + ir_wswfr,
+         "Rural" = do_ssgwf + do_ssswf + ls_gwtot + ls_swtot,
+         "Industrial" = mi_wgwfr + mi_wswfr + in_wgwfr + in_wswfr,
+         "Thermoelectric" = pt_wgwfr + pt_wswfr) %>% 
+  select(State, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric) %>% 
+  group_by(State) %>% 
+  summarise(across(1:5,sum), Year = 1990) %>% 
+  pivot_longer(2:6, names_to = "Sectors", values_to = "Withdrawals")
+
+
+# Creating new object from data object 1995
+wu_1995 <- d_wu_1995 %>% 
+  select(year, state_code, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, ls_wgw_fr, ls_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = state_code, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = mi_wgw_fr + mi_wsw_fr + in_wgw_fr + in_wsw_fr,
+         "Thermoelectric" = pt_wgw_fr + pt_wsw_fr) %>% 
+  select(State, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric) %>% 
+  group_by(State) %>% 
+  summarise(across(1:5,sum), Year = 1995) %>% 
+  pivot_longer(2:6, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 2000
+wu_2000 <- d_wu_2000 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, it_wgw_fr, it_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, mi_wgw_fr, mi_wsw_fr,
+         in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = statefips, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = it_wgw_fr + it_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = mi_wgw_fr + mi_wsw_fr + in_wgw_fr + in_wsw_fr,
+          "Thermoelectric" = pt_wgw_fr + pt_wsw_fr) %>% 
+  select(State, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric) %>% 
+  group_by(State) %>% 
+  summarise(across(1:5,sum), Year = 2000) %>% 
+  pivot_longer(2:6, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 2005
+wu_2005 <- d_wu_2005 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, ls_wgw_fr, ls_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = statefips, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + ls_wgw_fr + ls_wsw_fr,
+         "Industrial" = mi_wgw_fr + mi_wsw_fr + in_wgw_fr + in_wsw_fr,
+         "Thermoelectric" = pt_wgw_fr + pt_wsw_fr) %>% 
+  select(State, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric) %>% 
+  group_by(State) %>% 
+  summarise(across(1:5,sum), Year = 2005) %>% 
+  pivot_longer(2:6, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 2010
+wu_2010 <- d_wu_2010 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, li_wgw_fr, li_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = statefips, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + li_wgw_fr + li_wsw_fr,
+         "Industrial" = mi_wgw_fr + mi_wsw_fr + in_wgw_fr + in_wsw_fr,
+          "Thermoelectric" = pt_wgw_fr + pt_wsw_fr) %>% 
+  select(State, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric) %>% 
+  group_by(State) %>% 
+  summarise(across(1:5,sum), Year = 2010) %>% 
+  pivot_longer(2:6, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating new object from data object 2015
+wu_2015 <- d_wu_2015 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, li_wgw_fr, li_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr) %>% 
+  mutate("State" = statefips, 
+         "Public Supply" = ps_wgw_fr + ps_wsw_fr, 
+         "Irrigation" = ir_wgw_fr + ir_wsw_fr,
+         "Rural" = do_wgw_fr + do_wsw_fr + li_wgw_fr + li_wsw_fr,
+         "Industrial" = mi_wgw_fr + mi_wsw_fr + in_wgw_fr + in_wsw_fr,
+          "Thermoelectric" = pt_wgw_fr + pt_wsw_fr) %>% 
+  select(State, "Public Supply", Irrigation, Rural, Industrial, Thermoelectric) %>% 
+  group_by(State) %>% 
+  summarise(across(1:5,sum), Year = 2015) %>% 
+  pivot_longer(2:6, names_to = "Sectors", values_to = "Withdrawals")
+
+# Creating a separate object that calls the data object allows us
+# to manipulate the data object while preserving the original data.
+```
+
+## Data visualizations
+
+### Wrangle data for plotting 
+
+3500 observations come from combining all the data from the 14 years and filtering out Puerto Rico, Virgin Islands, District of Columbia, and any 0 values. The unique() function allows us to check if there are 50 states. Each column is organized into state, year, sectors, and withdrawal values.
+
+```{r, warning = FALSE, message = FALSE, error = TRUE, echo = TRUE}
+wu_all <- rbind(wu_1950, wu_1955, wu_1960, wu_1965, wu_1970,
+                wu_1975, wu_1980, wu_1985, wu_1990, wu_1995, wu_2000,
+                wu_2005, wu_2010, wu_2015) %>% 
+  replace(is.na(.), 0) %>% 
+  filter(State != 0,
+         State != 11,
+         State != 72,
+         State != 78)
+
+# Check for 50 FIPS 
+unique_check <- unique(wu_all[1])
+
+# Step 2.3: Prepare for Plot
+wu_all_plot <- wu_all %>% 
+  replace(is.na(.), 0) %>% 
+  select(Year, Withdrawals) %>% 
+  group_by(Year) %>% 
+  summarize(Withdrawals = sum(Withdrawals))
+
+# Step 2.4: Plot
+ggplot() +
+  geom_line(data = wu_all_plot, aes(x = Year, y = Withdrawals),
+            color = "dodgerblue", size = 2) +
+  # geom_label: creates labels for each data point on plot
+  # label:adjusts what the label is; controls # of sig figs, changes text size
+  geom_label(data = wu_all_plot, aes(x = Year,
+                                     y = Withdrawals,
+                                     label = scales::comma(signif(Withdrawals, 3))),
+             size = 1.5) +
+  labs(x = "Year",
+       y = "Withdrawals (Mgal/day)",
+       caption = "Figure 1: Total Fresh Withdrawals in the USA 1950-2015. 
+       (Plot created by Tiffany Hsu. Data from USGS (2015)).") +
+  theme(axis.text = element_text(color="grey", size = 8),
+        axis.ticks.x = element_blank(),
+        axis.ticks.y = element_blank(),
+        panel.background = element_blank(),
+        panel.grid.major = element_line(size = 0.1, color = "grey"),
+        plot.caption = element_text(hjust = 0, size = 10, face = "bold"),
+        # legend.position: empty quotes mean there is no legend
+        legend.position = "") +
+  # scale_x_continuous: vertical grid lines are tighter, all the years appear on x-axis
+  # scale_y_continuous: increases # of horizontal grid lines, more increments on y-axis
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 20)) +
+  scale_y_continuous(breaks = scales::pretty_breaks(n = 10), limits = c(0, 380000))
+
+```
+
+
+#### Organize data for plottng timeseries of sectoral withdrawals
+```{r,echo=TRUE, error= TRUE, message= FALSE, warning= FALSE}
+# Creating new object totaling withdrawals from each sector by Year
+wu_all_sectors <- wu_all %>% 
+  replace(is.na(.),0) %>% 
+  group_by(Sectors, Year) %>% 
+  summarize(Withdrawals = sum(Withdrawals))
+
+wu_all_check <- wu_all_sectors %>%
+  select(Sectors, Withdrawals) %>% 
+  group_by(Sectors) %>% 
+  summarise(Withdrawals =sum(Withdrawals))
+
+# Plot figure 2
+ggplot() +
+  geom_col(data=wu_all_sectors, 
+           aes(Year, Withdrawals, fill = reorder(Sectors, Withdrawals)), 
+           position = position_dodge(3.5), 
+           width = 4) + 
+  
+  # The line plot function itself does not include points so geom_point allows us to
+  # customize the points and overlay it on the line.
+  geom_line(data=wu_all_plot, 
+            aes(x=Year, y=Withdrawals / 2,), 
+            color = "grey", 
+            size= 1) +
+  geom_point(data=wu_all_plot, 
+             aes(x=Year, y=Withdrawals/ 2), 
+             color = "grey", 
+             size= 2, 
+             fill="grey") +
+  scale_x_continuous(breaks = pretty_breaks(n = 14)) + 
+  
+  # The function below gets rid of the year 1945 and 2020.
+  coord_cartesian(expand = FALSE) +
+  
+  scale_y_continuous(
+    name = "Sector Withdrawals (Mgal/day)", 
+    breaks = pretty_breaks(n = 10), 
+    labels = label_comma(), 
+    limits = c(0, 200000),
+    
+    # expand = c(0,0) gets rid of the space between the axis and the columns
+    expand = c(0,0),
+    
+    # The trans argument transforms the axes unit by multiplying the values by 2 to match
+    # the units we want for total withdrawals. We multiply by 2 because the units of the 
+    # second axis is double that of the first y-axis. However, transforming the axis units
+    # also transformed the y values in our data. For this reason, we have to divide the 
+    # Withdrawals value by 2.
+    sec.axis = sec_axis(trans =~.*2, 
+                        name = "Total Withdrawals (Mgal/day)", 
+                        breaks = pretty_breaks(n=10), 
+                        labels = label_comma())) +
+  labs(x = "Year",
+       y = "Sector Withdrawals (Mgal/day)",
+       caption = "Figure 2: Total Fresh Withdrawals in the USA 1950-2015.",
+       fill = "") +
+  
+  # theme_few adds borders around the plot 
+  theme_few() +
+  theme(axis.text = element_text(color="black", size = 8),
+        axis.text.y.right = element_text(color = "grey"),
+        axis.title.y.right = element_text(color = "grey"),
+        plot.caption = element_text(hjust = 0, size = 10, face = "bold"),
+        legend.position = "top") +
+  scale_fill_manual(values = c("turquoise",
+                               "cornflowerblue",
+                               "brown3",
+                               "sienna1",
+                               "olivedrab3")) 
+```
+### Key Takeaway:
+
+From the plot, we can conclude that 1980 peaked in water withdrawal amounts. After 1980, water withdrawals saw a slight decrease. This could be due to implementation of water conservation practices. Thermoelectric water use saw a large increase from 1950 compared to 1980. Irrigation and thermoelectric water maintain their role as the sectors contributing to the most withdrawals over time. Increases in irrigation could be due to an increasing population and demand of food supply. Industrial water use also declined sharply from the years 1950 in comparison to 1960. 
+
+
+**My plot’s data appear to be different than the [USGS plot](https://www.usgs.gov/mission-areas/water-resources/science/trends-water-use?qt-science_center_objects=0#qt-science_center_objects). The bars in the USGS plot show different patterns than my plot.**
+
+* The USGS plot has the y-axis units in withdrawals in billion gallons per day, whereas our plot uses withdrawals in Mgal per day.
+* The line plot also has empty points instead of filled in dots.
+* The withdrawal order is also different; where we begin with rural supply, the USGS plot begins with public supply. USGS also grouped the industrial sector along with mining and aquaculture data, however, we only used industrial data.
+* The columns are also outlined in black, in our plot, there is no outline present.
+* In the USGS plot, there is additional space to the right of the last column of 2015.
+* USGS plots total withdrawals while our plot only includes freshwater withdrawals. 
+
+
+#### Organize data for plotting timeseries of sectoral withdrawals for NEW YORK
+```{r, echo=TRUE, error=TRUE, message=FALSE, warning=FALSE}
+wu_ny <- wu_all %>% 
+  filter(State == 32) %>% 
+  group_by(Sectors, Year) %>% 
+  summarize(Withdrawals = sum(Withdrawals))
+
+wu_ny_total <- wu_all %>% 
+  filter(State == 32) %>% 
+  select(Year, Withdrawals) %>% 
+  group_by(Year) %>% 
+  summarize(Withdrawals = sum(Withdrawals))
+
+# Plot NY timeseries
+ggplot() +
+  geom_col(data= wu_ny, 
+           aes(Year, Withdrawals, fill = reorder(Sectors, Withdrawals)), 
+           position = position_dodge(3.5), 
+           width = 4) + 
+  
+  geom_line(data= wu_ny_total, 
+            aes(x=Year, y=Withdrawals), 
+            color = "grey", 
+            size= 1) +
+  
+  geom_point(data= wu_ny_total, 
+             aes(x=Year, y=Withdrawals), 
+             color = "grey", 
+             size= 2, 
+             fill="grey") +
+  
+  scale_x_continuous(breaks = pretty_breaks(n = 14)) + 
+  
+  coord_cartesian(expand = FALSE) +
+  
+  scale_y_continuous(
+    name = "Sector Withdrawals (Mgal/day)", 
+    breaks = pretty_breaks(n = 10), 
+    labels = label_comma(), 
+    limits = c(0, 4000),
+    expand = c(0,0),
+    
+    # I picked a one-for-one transformation because the irrigation sector values 
+    # were so high that the bars would overlap with the line plot. When I tried 
+    # keeping the original transformation for 2, the line plot appeared over the 
+    # bars and became hard to read/interpret.
+    sec.axis = sec_axis(trans =~.*1, 
+                        name = "Total Withdrawals (Mgal/day)", 
+                        breaks = pretty_breaks(n=10), 
+                        labels = label_comma())) +
+  
+  labs(x = "Year",
+       y = "Sector Withdrawals (Mgal/day)",
+       caption = "Figure 3: Fresh Withdrawals in NY 1950-2015.",
+       fill = "") +
+
+  theme_few() +
+  
+  theme(axis.text = element_text(color="black", size = 8),
+        axis.text.y.right = element_text(color = "grey"),
+        axis.title.y.right = element_text(color = "grey"),
+        plot.caption = element_text(hjust = 0, size = 10, face = "bold"),
+        legend.position = "top") +
+  
+  scale_fill_manual(values = c("turquoise",
+                               "sienna1",
+                               "brown3",
+                               "cornflowerblue",
+                               "olivedrab3")) 
+
+```
+
+### Key Takeaway:
+
+Total water withdrawals reached the highest levels in 1985 and have declined. The irrigation sector has the highest levels in comparison to the other sectors in New York. The second largest sector is public supply. New York appears to have similar patterns with California, both of which have overwhelmingly high levels of irrigation withdrawals and have public supply as second in lead. 
+
+
+### USA vs. NY Sector Withdrawal Plot Differences
+
+The main difference between NY and USA is high withdrawals for the thermoelectric sector. In NY, irrigation values take the lead. This is likely due to the large role of agriculture in NY. In addition, rural and thermoelectric values are practically nonexistent in NY. In the USA, the withdrawals peak in the year 1980 where NY peaks in 1985. The total withdrawals in NY also appear like more of a dome from the years 1970-1995 where the USA plot reaches a sharp peak and then a linear decrease into a plateau.
+
+
+#### Comparing Irrigation and Public Supply Withdrawals by State
+```{r, echo = TRUE, error = TRUE, message = FALSE, warning = FALSE}
+
+fips <- d_wu_2015 %>% 
+  select(state, State = statefips) %>% 
+  unique() %>% 
+  filter(!State %in% c(0, 11, 72, 78)) 
+
+ps_all <- wu_all %>% 
+  replace(is.na(.), 0) %>% 
+  filter(Sectors == "Public Supply") %>% 
+  inner_join(fips, by = "State")
+
+ir_all <- wu_all %>% 
+  replace(is.na(.), 0) %>% 
+  filter(Sectors == "Irrigation") %>% 
+  inner_join(fips, by = "State")  
+
+data1 <- c("ps_all", "ir_all")
+
+cap <- c("Figure 4: Public Supply by state. Data from USGS (2015). 
+         Created by Tiffany Hsu.", "Figure 5: Irrigation by state. Data from USGS (2015). 
+         Created by Tiffany Hsu.")
+
+myplot <- function(data1, cap) {
+ ggplot() +
+    geom_line(data = data1,
+              aes(x= Year, y = Withdrawals, color = state), size = 1) +
+    scale_color_manual(values = rep(c("darkblue", "royalblue4", "steelblue3",
+                                         "dodgerblue2", "skyblue"), 10)) +
+    
+    gghighlight(max(Withdrawals), max_highlight = 5L,
+                unhighlighted_params = list(size = .5, color = alpha("grey", 0.4)),
+                label_params = list(size = 3, fill = "white", fontface = "bold",
+                                    color = c("darkblue", "royalblue4", "steelblue3",
+                                              "dodgerblue2", "skyblue"))) + 
+    scale_x_continuous(breaks = breaks_pretty(n = 15),
+                         expand = c(0,1)) +
+    scale_y_continuous(breaks = breaks_pretty(n = 7),
+                         expand = c(0,0),
+                         labels = label_comma()) +
+      
+      # add captions and labels
+      labs(caption = cap,
+           x = "\nYear\n",
+           y = "Withdrawals (Mgal/day)\n") +
+      
+      theme(axis.text = element_text(color = "black", size = 10),
+            panel.background = element_blank(),
+            axis.line = element_line(color = "black"),
+            plot.caption = element_text(hjust = 0, size = 12, face = "bold"),
+            legend.position = "")
+}
+
+# create a for loop that sequences from 1 to the # of entries in data 1
+ for(i in seq_along(data1)){
+  print(myplot(get(data1[i]), cap[i]))
+ }
+
+
+```
+### Key Takeaway:
+
+According to the plot, CA remains the state with the highest withdrawal values by both public supply and irrigation. California and Texas are also the only states that appear in the top five of both top five of public supply and irrigation withdrawals.
+
+
+#### Organize data for plotting timeseries of withdrawals by source
+```{r, echo = TRUE, error = TRUE, message = FALSE, warning = FALSE}
+
+# Creating GW object from data object 1965
+source_wu_1965 <- d_wu_1965 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop) %>% 
+  mutate("State" = area,
+         "Population" = tp_tot_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr + ls_wsw_fr + oi_wsw_fr + pt_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + ls_wgw_fr + oi_wgw_fr + pt_wgw_fr,
+         "Total" = GW + SW,
+         "Year" = 1965) %>% 
+  select(State, Population, SW, GW, Total, Year) %>% 
+  group_by(State) %>% 
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 1970
+source_wu_1970 <- d_wu_1970 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop) %>% 
+  mutate("State" = area,
+         "Population" = tp_tot_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr + ls_wsw_fr + oi_wsw_fr + pt_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + ls_wgw_fr + oi_wgw_fr + pt_wgw_fr,
+         "Total" = GW + SW,
+         "Year" = 1970) %>% 
+  select(State, Population, SW, GW, Total, Year) %>% 
+  group_by(State) %>% 
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 1975
+source_wu_1975 <- d_wu_1975 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop) %>% 
+  mutate("State" = area,
+         "Population" = tp_tot_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr + ls_wsw_fr + oi_wsw_fr + pt_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + ls_wgw_fr + oi_wgw_fr + pt_wgw_fr,
+         "Total" = GW + SW,
+         "Year" = 1975) %>% 
+  select(State, Population, SW, GW, Total, Year) %>% 
+  group_by(State) %>% 
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 1980
+source_wu_1980 <- d_wu_1980 %>% 
+  select(area, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, oi_wgw_fr, oi_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop) %>% 
+  mutate("State" = area,
+         "Population" = tp_tot_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr + ls_wsw_fr + oi_wsw_fr + pt_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + ls_wgw_fr + oi_wgw_fr + pt_wgw_fr,
+         "Total" = GW + SW,
+         "Year" = 1980) %>% 
+  select(State, Population, SW, GW, Total, Year) %>% 
+  group_by(State) %>% 
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 1985
+source_wu_1985 <- d_wu_1985 %>% 
+  select(scode, ps_wgwfr, ps_wswfr, ir_wgwfr, ir_wswfr,
+         do_ssgwf, do_ssswf, ls_gwtot, ls_swtot, mi_wgwfr,
+         mi_wswfr, in_wgwfr, in_wswfr, pt_wgwfr, pt_wswfr, po_total) %>% 
+  mutate("State" = scode,
+         "Population" = po_total,
+         "SW" =  ir_wswfr + ps_wswfr + do_ssswf + ls_swtot + in_wswfr + 
+           pt_wswfr + mi_wswfr,
+         "GW" = ir_wgwfr + ps_wgwfr + do_ssgwf + ls_gwtot + in_wgwfr + 
+           pt_wgwfr + mi_wgwfr,
+         "Total" = GW + SW) %>% 
+  select(State, Population, SW, GW, Total) %>% 
+  group_by(State) %>% 
+  summarise(across(1:4,sum), Year = 1985) %>% 
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 1990
+source_wu_1990 <- d_wu_1990 %>% 
+  select(scode, ps_wgwfr, ps_wswfr, ir_wgwfr, ir_wswfr,
+         do_ssgwf, do_ssswf, ls_gwtot, ls_swtot, mi_wgwfr,
+         mi_wswfr, in_wgwfr, in_wswfr, pt_wgwfr, pt_wswfr, po_total) %>% 
+  mutate("State" = scode,
+         "Population" = po_total,
+         "SW" =  ir_wswfr + ps_wswfr + do_ssswf + ls_swtot + in_wswfr + pt_wswfr + 
+           mi_wswfr,
+         "GW" = ir_wgwfr + ps_wgwfr + do_ssgwf + ls_gwtot + in_wgwfr + pt_wgwfr + 
+           mi_wgwfr,
+         "Total" = GW + SW) %>%
+  select(State, Population, SW, GW, Total) %>% 
+  group_by(State) %>% 
+  summarise(across(1:4,sum), Year = 1990) %>% 
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+ 
+# Creating GW object from data object 1995
+source_wu_1995 <- d_wu_1995 %>% 
+  select(year, state_code, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, ls_wgw_fr, ls_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr, total_pop)%>% 
+  mutate("State" = state_code,
+         "Population" = total_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr + ls_wsw_fr + in_wsw_fr + pt_wsw_fr + 
+           mi_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + ls_wgw_fr + in_wgw_fr + pt_wgw_fr + 
+           mi_wgw_fr,
+         "Total" = GW + SW,
+         "Year" = year) %>% 
+  select(State, Population, SW, GW, Total) %>% 
+  group_by(State) %>% 
+  summarise(across(1:4,sum), Year = 1995) %>%
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+
+# Creating GW object from data object 2000
+source_wu_2000 <- d_wu_2000 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, it_wgw_fr, it_wsw_fr, do_wgw_fr, do_wsw_fr,
+         ls_wgw_fr, ls_wsw_fr, mi_wgw_fr, mi_wsw_fr,
+         in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop)%>% 
+  mutate("State" = statefips,
+         "Population" = tp_tot_pop,
+         "SW" =  it_wsw_fr + ps_wsw_fr + do_wsw_fr + ls_wsw_fr + in_wsw_fr + pt_wsw_fr + 
+           mi_wsw_fr,
+         "GW" = it_wgw_fr + ps_wgw_fr + do_wgw_fr + ls_wgw_fr + in_wgw_fr + pt_wgw_fr + 
+           mi_wgw_fr,
+         "Total" = GW + SW) %>% 
+  select(State, Population, SW, GW, Total) %>% 
+  group_by(State) %>% 
+  summarise(across(1:4,sum), Year = 2000) %>%
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 2005
+source_wu_2005 <- d_wu_2005 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, ls_wgw_fr, ls_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop)%>% 
+  mutate("State" = statefips,
+         "Population" = tp_tot_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr + ls_wsw_fr + in_wsw_fr + pt_wsw_fr + 
+           mi_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + ls_wgw_fr + in_wgw_fr + pt_wgw_fr + 
+           mi_wgw_fr,
+         "Total" = GW + SW) %>% 
+  select(State, Population, SW, GW, Total) %>% 
+  group_by(State) %>% 
+  summarise(across(1:4,sum), Year = 2005) %>%
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 2010
+source_wu_2010 <- d_wu_2010 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, li_wgw_fr, li_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop)%>% 
+  mutate("State" = statefips,
+         "Population" = tp_tot_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr  + in_wsw_fr + pt_wsw_fr + mi_wsw_fr +
+           li_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + li_wgw_fr + in_wgw_fr + pt_wgw_fr + 
+           mi_wgw_fr,
+         "Total" = GW + SW) %>% 
+  select(State, Population, SW, GW, Total) %>% 
+  group_by(State) %>% 
+  summarise(across(1:4,sum), Year = 2010) %>%
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+# Creating GW object from data object 2015
+source_wu_2015 <- d_wu_2015 %>% 
+  select(statefips, ps_wgw_fr, ps_wsw_fr, ir_wgw_fr, ir_wsw_fr,
+         do_wgw_fr, do_wsw_fr, li_wgw_fr, li_wsw_fr, mi_wgw_fr,
+         mi_wsw_fr, in_wgw_fr, in_wsw_fr, pt_wgw_fr, pt_wsw_fr, tp_tot_pop)%>% 
+  mutate("State" = statefips,
+         "Population" = tp_tot_pop,
+         "SW" =  ir_wsw_fr + ps_wsw_fr + do_wsw_fr  + in_wsw_fr + pt_wsw_fr + mi_wsw_fr + 
+           li_wsw_fr,
+         "GW" = ir_wgw_fr + ps_wgw_fr + do_wgw_fr + li_wgw_fr + in_wgw_fr + pt_wgw_fr + 
+           mi_wgw_fr,
+         "Total" = GW + SW) %>% 
+  select(State, Population, SW, GW, Total) %>% 
+  group_by(State) %>% 
+  summarise(across(1:4,sum), Year = 2015) %>%
+  pivot_longer(3:5, names_to = "Source", values_to = "Withdrawals")
+
+wu_all_source <- rbind(source_wu_1965, source_wu_1970, source_wu_1975, source_wu_1980,
+                       source_wu_1985, source_wu_1990, source_wu_1995, source_wu_2000,
+                       source_wu_2005, source_wu_2010, source_wu_2015) %>% 
+  filter(State != 0,
+         State != 11,
+         State != 72,
+         State != 78)
+
+population <- wu_all_source %>% 
+  filter(Source == "Total") %>% 
+  select(Population, Year) %>% 
+  group_by(Year) %>% 
+  summarise(across(2, sum))
+
+source <- wu_all_source %>%
+  select(Year, Source, Withdrawals) %>% 
+  group_by(Source, Year) %>% 
+  summarise(Withdrawals = sum(Withdrawals))
+
+#Plot figure 6
+ggplot() +
+  geom_col(data= source, 
+           aes(Year, Withdrawals, fill = reorder(Source, Withdrawals)), 
+           position = position_dodge(3.5), 
+           width = 4,
+           color = "black") + 
+  
+  geom_line(data= population, 
+            aes(x=Year, y=Population, linetype = "Population"), 
+            color = "hotpink", 
+            size= 2) +
+
+  
+  scale_x_continuous(breaks = pretty_breaks(n = 14))  +
+  
+  scale_y_continuous(
+    name = "Withdrawals (Mgal/day)", 
+    breaks = pretty_breaks(n = 10), 
+    labels = label_comma(), 
+    limits = c(0, 400000),
+    expand = c(0,0),
+    sec.axis = sec_axis(trans =~.*0.001, 
+                        name = "Population (Millions)", 
+                        breaks = pretty_breaks(n=10), 
+                        labels = label_comma())) +
+  labs(x = "Year",
+       y = "Withdrawals (Mgal/day)",
+       caption = 
+       "Figure 6: Trends in population and fresh water withdrawals by source in USA.
+       Data from USGS (1965-2015).",
+       fill = "") +
+  theme_few() +
+  theme(axis.text = element_text(color="black", size = 8),
+        axis.text.y.right = element_text(color = "hotpink", size = 8),
+        axis.title.y.right = element_text(color = "hotpink",
+                                          margin = margin(t = 0, r = 0, b = 0, l = 20)),
+        axis.title.y.left = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+        plot.caption = element_text(hjust = 0, size = 10, face = "bold"),
+        legend.position = "top",
+        legend.title = element_blank()) +
+  scale_fill_manual(values = c("slategray2", "deepskyblue", "blue3"))
+
+
+```
+
+### Key Takeaway:
+
+Consistent with the previous plots, 1980 saw the highest spike in total withdrawals. Surface water consistently remains the most used source of water in comparison to groundwater. Surface water may come from rivers, lakes, reservoirs, streams, and oceans and be used for public supply and irrigation. A potential reason why groundwater withdrawals are not as high as surface water could be because groundwater needs to be pumped out from underground.
+
+
+#### This plot juxtaposes water use and population.
+
+Interestingly, population is increasing linearly while there is a slight decline in withdrawals starting from 2010. This could be due to new regulations and more efficient technology in the water industry. 
+
+
+#### Organize data for plotting timeseries of gw and sw withdrawals for New York
+```{r, echo = TRUE, error = TRUE, message = FALSE, warning = FALSE}
+
+wu_ny_source <- rbind(source_wu_1965, source_wu_1970, source_wu_1975, source_wu_1980,
+                      source_wu_1985, source_wu_1990, source_wu_1995, source_wu_2000,
+                      source_wu_2005, source_wu_2010, source_wu_2015) %>% 
+  replace(is.na(.), 0) %>% 
+  filter(State == 36,
+         State != 0,
+         State != 11,
+         State != 72,
+         State != 78)
+
+population_ny <- wu_ny_source %>% 
+  filter(Source == "Total") %>% 
+  select(Population, Year) %>% 
+  group_by(Year) %>% 
+  summarise(across(2, sum))
+
+source_ny <- wu_ny_source %>%
+  select(Year, Source, Withdrawals) %>% 
+  group_by(Source, Year) %>% 
+  summarise(Withdrawals = sum(Withdrawals))
+
+
+ggplot() +
+
+  geom_col(data= source_ny, 
+           aes(Year, Withdrawals, fill = reorder(Source, Withdrawals)), 
+           position = position_dodge(3.5), 
+           width = 4,
+           color = "black") + 
+  
+    geom_line(data= population_ny, 
+            aes(x=Year, y=Population / 2, linetype = "Population"), 
+            color = "hotpink", 
+            size= 2) +
+  
+  scale_x_continuous(breaks = pretty_breaks(n = 14))  +
+  
+  scale_y_continuous(
+    name = "Withdrawals (Mgal/day)", 
+    breaks = pretty_breaks(n = 10), 
+    labels = label_comma(), 
+    limits = c(0, 12500),
+    expand = c(0,0),
+    sec.axis = sec_axis(trans =~./500, 
+                        name = "Population (Millions)", 
+                        breaks = pretty_breaks(n=10), 
+                        labels = label_comma())) +
+  labs(x = "Year",
+       y = "Withdrawals (Mgal/day)",
+       caption = 
+       "Figure 7: Trends in population and fresh water withdrawals by source in NY.
+       Data from USGS (1965-2015).",
+       fill = "") +
+  theme_few() +
+  theme(axis.text = element_text(color="black", size = 8),
+        axis.text.y.right = element_text(color = "hotpink", size = 8),
+        axis.title.y.right = element_text(color = "hotpink",
+                                          margin = margin(t = 0, r = 0, b = 0, l = 20)),
+        axis.title.y.left = element_text(margin = margin(t = 0, r = 20, b = 0, l = 0)),
+        plot.caption = element_text(hjust = 0, size = 10, face = "bold"),
+        legend.position = "top",
+        legend.title = element_blank()) +
+  scale_fill_manual(values = c("slategray2", "deepskyblue", "blue3"))
+
+
+```
+
+### Key Takeaway:
+
+Surface water is once again the most used source of withdrawals over time. Groundwater withdrawals are consistently low throughout 1965-2015. Peak withdrawals occurred during 1975 and have varied since. 2015 actually reveals the lowest withdrawal levels and hopefully continues on a downward trend. 
+
+#### This plot juxtaposes water use and population.
+
+NY sees a  peak in population starting from around 1975, where water use was the highest ever recorded. Although the population is increasing at high rates, water withdrawals are actually decreasing (shown by 2010 and 2015).
+
+
+### USA vs. NY Source Withdrawal Plot Differences
+
+In comparison to the overall USA withdrawals by source, NY has more variance in population levels as 1975 shows a boom in population and withdrawals. However, both NY and USA plots show surface water as the more widely used source of withdrawals. While the USA map already demonstrated surface water as a clear lead by source, NY demonstrates an even more stark comparison between groundwater and surface water in the years 1965-2015. In exploring the relationship between population and water withdrawals, the USA plot reveal an inverse relationship of increasing population and decreasing withdrawals while the NY plot demonstrates an almost steady population level with fluxes of increasing and decreasing withdrawals.
+
