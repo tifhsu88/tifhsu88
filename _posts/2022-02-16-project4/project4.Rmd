@@ -1,23 +1,116 @@
 ---
-title: "project4"
+title: "Principal component analysis for environmental and climatic variables"
 description: |
-  A short description of the post.
+  Materials from ESM 244
 author:
   - name: Tiffany Hsu
-date: 2022-02-16
+date: 2022-03-03
 output:
   distill::distill_article:
     self_contained: false
     code_folding: hide 
 ---
 
+## Overview 
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE)
+We seek to understand relationships between environmental and climate variables of countries by performing dimension reduction through principal component analysis (PCA). We create a biplot of  (PCA) for the variables by region. Variables explored in the report include annual mean rainfall, annual mean temperatures, cloudiness, cropland cover, tree canopy cover, elevation, and accessibility to cities.
+
+
+```{r setup, include=FALSE, message = FALSE, warning = FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+ 
+library(tidyverse)
+library(here)
+ 
+# For Part 1 (PCA)
+library(ggfortify) # For PCA biplot
+library(palmerpenguins)
+library(patchwork)
+
 ```
 
-Distill is a publication format for scientific and technical writing, native to the web.
+## Data wrangling
+```{r}
+#load datasets
+env_vars <- read_csv(here("data/world_env_vars.csv"))
 
-Learn more about using Distill at <https://rstudio.github.io/distill>.
+#drop all rows including NAs
+env_vars_drop_na <- read_csv(here("data/world_env_vars.csv")) %>% 
+  drop_na()
+
+# wrangle continents data
+
+continents <- read_csv(here("data/continents2.csv")) %>% 
+  mutate("Country" = name) %>% 
+  select(Country, region)
+
+env_vars_region <- inner_join(env_vars_drop_na, continents, by = "Country")
+
+# convert
+#env_vars_region$Country <- as.numeric(as.factor(env_vars_region$Country))
+
+env_vars_pca <- env_vars_region %>%
+  #select(accessibility_to_cities:slope) %>% 
+  select(accessibility_to_cities, elevation, cropland_cover, tree_canopy_cover, rain_mean_annual, temp_mean_annual, cloudiness) %>% 
+  scale() %>% 
+  prcomp()
+
+#summary(env_vars_pca)
+
+# Importance of components:
+#                           PC1    PC2    PC3    PC4     PC5
+# Standard deviation     1.2930 1.1502 0.9979 0.8019 0.60511
+# Proportion of Variance 0.3344 0.2646 0.1992 0.1286 0.07323
+# Cumulative Proportion  0.3344 0.5990 0.7982 0.9268 1.00000
+```
+
+
+## Visualizing PCA through a **biplot**
+```{r}
+### ggfortify::autoplot -autoplot uses ggplot to make a plot for specific data types (ie PCA)
+
+autoplot(env_vars_pca,
+        data = env_vars_region,
+        loadings = TRUE,
+        colour = 'region',
+        loadings.label = TRUE,
+        loadings.label.size = 3,
+        loadings.colour = "black",
+        loadings.label.colour = "black",
+        loadings.label.vjust = -2.5,
+        loadings.label.fontface = "bold",
+        size = 2,
+        alpha = 0.6
+        ) +
+  scale_color_manual(values = c("dodgerblue","chartreuse","magenta", "slateblue1", "darkorange")) +
+  # scale_fill_manual(values = c("dodgerblue","chartreuse","magenta", "slateblue1", "darkorange")) +
+  theme_minimal() + 
+  theme(text = element_text(family = "Palatino"),
+       axis.text = element_text(face = "bold"),
+       axis.title = element_text(face = "bold")) + 
+  labs(title = "Principal Component Analysis")
+
+```
+
+**Figure 1: Biplot of principal components analysis (PCA) for environmental and climatic variables by region** 
+
+Countries are represented based on their aggregate scores across annual mean rainfall, annual mean temperatures, cloudiness, cropland cover, tree canopy cover, elevation, and accessibility to cities. The arrows indicate how each variable is increasing in each direction. The countries are color-coded by region. 
+
+
+### **Takeaways:**
+
+- Europe mainly clusters around cropland cover, relative to the first two principal components. 
+- Annual mean rainfall, tree canopy cover, and cloudiness reveal the most variance. 
+- Annual mean rainfall and tree canopy cover are very closely correlated due to their close proximity within one another. This makes sense because tree cover and growth may be explained by increased rainfall and water availability.
+- Annual mean temperature and cropland cover are negatively correlated because they are almost directly across from one another.
+- Accessibility to cities and cropland cover are also negatively correlated. Thus, the more accessible a city is, the less crop cover there is. 
+- Cloudiness shows no correlation with annual mean temperatures, accessibility to cities, or cropland cover.
+- Elevation shows negative correlation with annual mean rainfall and tree canopy cover.
+
+
+### Data Sources:
+Environmental and climate variable data compiled and provided by @zander_venter on Kaggle, described as: “This data is all acquired through Google Earth Engine (https://earthengine.google.com/) where publicly available remote sensing datasets have been uploaded...Most of the data is derived by calculating the mean for each country at a reduction scale of about 10km.”
+
+Continent data compiled and provided by @Andrana Olteanu on Kaggle, described as: Dataset was taken from lukes on GitHub: https://github.com/lukes/ISO-3166-Countries-with-Regional-Codes/blob/master/all/all.csv. https://www.kaggle.com/andradaolteanu/country-mapping-iso-continent-region 
 
 
